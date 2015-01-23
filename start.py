@@ -1,4 +1,4 @@
-import tkinter, math
+import tkinter, math, parser, random
 
 mul_m_m = lambda X,Y: [[sum(a*b for a,b in zip(x_row, y_col)) for y_col in zip(*Y)] for x_row in X]
 
@@ -51,7 +51,8 @@ class SimpleClass:
 class SimpleArrow:
     def __init__(self, canvas, _from, _to):
         self.set_from_to(_from, _to)
-        self.tag = self.__hash__()
+        self.random_color = '#%02x%02x%02x' % (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+        #self.tag = self.__hash__()
 
     def set_from_to(self, _from, _to):
         self.sx = _from.x + _from.width / 2
@@ -80,9 +81,10 @@ class SimpleArrow:
         fx0, fy0 = self.sx + r0[0], self.sy + r0[1]
         fx1, fy1 = self.sx + r1[0], self.sy + r1[1]
         fx2, fy2 = self.sx + r2[0], self.sy + r2[1]
-        self.items_to_delete.append(self.canvas.create_line(self.sx, self.sy, fx0, fy0, tags = self.tag))
-        self.items_to_delete.append(self.canvas.create_line(fx0, fy0, fx1, fy1, tags = self.tag))
-        self.items_to_delete.append(self.canvas.create_line(fx0, fy0, fx2, fy2, tags = self.tag))
+
+        self.items_to_delete.append(self.canvas.create_line(self.sx, self.sy, fx0, fy0, width = 2, fill=self.random_color))
+        self.items_to_delete.append(self.canvas.create_line(fx0, fy0, fx1, fy1, width = 2, fill=self.random_color))
+        self.items_to_delete.append(self.canvas.create_line(fx0, fy0, fx2, fy2, width = 2, fill=self.random_color))
 
     def redraw(self):
         while len(self.items_to_delete) > 0:
@@ -106,16 +108,22 @@ bx, by = 100, 100
 fx, fy = 50, 10
 dx, dy = 0, 10
 prev_x, prev_y = None, None
-canvas, classes = None, []    
+canvas, classes = None, {}    
 current = None
+
+def eventxy_to_canvasxy(canvas, x,y):
+    retx = canvas.canvasx(x)
+    rety = canvas.canvasy(y)
+    return (retx, rety)
 
 def on_start_drag(event):
     global current
     global prev_x
     global prev_y
-    print('start at: (%d. %d)'%(event.x, event.y))
-    prev_x, prev_y = event.x, event.y
-    c = [x for x in classes if x.is_inside(event.x, event.y)]
+    canvasxy = eventxy_to_canvasxy(event.widget, event.x, event.y)
+    print('start at: (%d. %d)'%canvasxy)
+    prev_x, prev_y = canvasxy[0], canvasxy[1]
+    c = [classes[x] for x in classes if classes[x].is_inside(canvasxy[0], canvasxy[1])]
     if len(c) > 0:
          current = c[0]
     
@@ -124,47 +132,71 @@ def on_drag(event):
     global prev_x
     global prev_y
     #print('darg to: (%d, %d)'%(event.x, event.y))
+    canvasxy = eventxy_to_canvasxy(event.widget, event.x, event.y)
     if current != None:
-        current.x -= prev_x - event.x
-        current.y -= prev_y - event.y
-        prev_x, prev_y = event.x, event.y
+        current.x -= prev_x - canvasxy[0]
+        current.y -= prev_y - canvasxy[1]
+        prev_x, prev_y = canvasxy[0], canvasxy[1]
         current.redraw()
 
 def on_release(event):
     global current
     global prev_x
     global prev_y
-    print('release at: (%d. %d)'%(event.x, event.y))
+    canvasxy = eventxy_to_canvasxy(event.widget, event.x, event.y)
+    print('release at: (%d. %d)'%canvasxy)
     current, prev_x, prev_y = None, None, None
     
         
 
 main_window = tkinter.Tk()
 
-canvas = tkinter.Canvas(main_window, width = 500, height = 500, bd=4)
-canvas.pack()
+canvas_width, canvas_height = 1700, 768
 
-simple_class1 = SimpleClass(canvas, 10, 10, 120, 25, 'from')
-simple_class1.set_tag('1')
-simple_class1.draw()
+frame = tkinter.Frame(main_window, width = canvas_width, height = canvas_height)
+frame.pack()
 
-simple_class2 = SimpleClass(canvas, 150, 50, 170, 25, 'to')
-simple_class2.set_tag('2')
-simple_class2.draw()
+scrollregion_width, scrollregion_height = 2500, 2500
 
-simple_class3 = SimpleClass(canvas, 250, 50, 170, 25, 'to 2')
-simple_class3.set_tag('3')
-simple_class3.draw()
+canvas = tkinter.Canvas(frame, width = canvas_width, height = canvas_height, scrollregion=(0, 0, scrollregion_width, scrollregion_height), bd=4)
 
-simple_arrow1 = SimpleArrow(canvas, simple_class1, simple_class2)
-simple_arrow1.draw()
+hbar = tkinter.Scrollbar(frame, orient=tkinter.HORIZONTAL)
+hbar.pack(side=tkinter.BOTTOM,fill=tkinter.X)
+hbar.config(command=canvas.xview)
 
-simple_arrow2 = SimpleArrow(canvas, simple_class1, simple_class3)
-simple_arrow2.draw()
+vbar = tkinter.Scrollbar(frame, orient=tkinter.VERTICAL)
+vbar.pack(side=tkinter.RIGHT,fill=tkinter.Y)
+vbar.config(command=canvas.yview)
 
-classes.append(simple_class1)
-classes.append(simple_class2)
-classes.append(simple_class3)
+canvas.config(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
+canvas.pack(side=tkinter.LEFT,expand=True,fill=tkinter.BOTH)
+
+dp = parser.DirParser('/Users/SDI/Desktop/IOSProjects/vazhno-ios/Vazhno')
+dp.construct_graph()
+
+width, height = 200, 35
+offset_x, offset_y = 10, 10
+for node in dp.get_nodes():
+    width = len(node.value) * 10
+    # if offset_x + width > scrollregion_width:
+    #     offset_x = 10
+    #     offset_y += height * 1.1
+    #     classes[node.value] = SimpleClass(canvas, offset_x, offset_y, width, height, node.value)
+    # else:
+    #     classes[node.value] = SimpleClass(canvas, offset_x, offset_y, width, height, node.value)
+
+    # offset_x += width + 10
+    # offset_y %= scrollregion_height
+    classes[node.value] = SimpleClass(canvas, random.randint(0, scrollregion_width - width), random.randint(0, scrollregion_height - height), width, height, node.value)
+    classes[node.value].draw()
+
+for edge in dp.get_edges():
+    #import pdb 
+    #pdb.set_trace()
+    _from = edge[0]
+    _to = edge[1]
+    arrow = SimpleArrow(canvas, classes[_from.value], classes[_to.value])
+    arrow.draw()
 
 canvas.bind('<ButtonPress-1>', on_start_drag)
 canvas.bind('<B1-Motion>', on_drag)

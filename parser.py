@@ -21,27 +21,46 @@ class FileParser:
         self.parsed = self.parser.parse_modules_name()
         return self.parsed
 
+class DirParser:
+    def __init__(self, dir_name):
+        self.dir = dir_name
+        self.name_full_name_pair = []
+        self._construct_meta()
+
+    def _construct_meta(self):
+        # /Users/SDI/Desktop/IOSProjects/vazhno-ios/Vazhno
+        self.name_full_name_pair = []
+        for root, dirs, file_names in os.walk(self.dir):
+            files = [x for x in file_names if x.endswith('.h')]
+            self.name_full_name_pair += list(zip(files, [root+'/'+x for x in files]))    
+        
+    def construct_graph(self):
+        G = {}
+        for file_in_dir in self.name_full_name_pair:
+            full_name = file_in_dir[1]
+            short_name = file_in_dir[0]
+            parser = FileParser(full_name)
+            imported_modules = parser.parse_modules_name()
+            if len(imported_modules) > 0:
+                G[short_name] = imported_modules
+
+        self.graph = graph.Graph(G)
+
+    def get_nodes(self):
+        return self.graph.nodes
+
+    def get_edges(self):
+        return self.graph.edges
+
 if __name__ == '__main__':
     # simple_text = '\n\n\n\n\#import <some.h>\n#import <some2.h>'
     # parser = FileParser('/Users/SDI/Desktop/IOSProjects/vazhno-ios/Vazhno/VZVZRSimpleViewController.m')
     # res = parser.parse_modules_name()
     # print(*res, sep='\n')
-    files_in_dir, full_file_names, name_full_name_pair = [], [], []
-    for root, dirs, file_names in os.walk('/Users/SDI/Desktop/IOSProjects/vazhno-ios/Vazhno'):
-        files = [x for x in file_names if x.endswith('.h')]
-        full_file_names += [root+'/'+x for x in files]
-        files_in_dir +=  files
-        name_full_name_pair += list(zip(files, full_file_names))
     
-    G = {}
-    for file_in_dir in name_full_name_pair:
-        full_name = file_in_dir[1]
-        short_name = file_in_dir[0]
-        parser = FileParser(full_name)
-        imported_modules = parser.parse_modules_name()
-        G[short_name] = imported_modules
-
-    gr = graph.Graph(G)
-    print('nodes: ', *gr.nodes, sep='\n')
+    dp = DirParser('/Users/SDI/Desktop/IOSProjects/vazhno-ios/Vazhno')
+    dp.construct_graph()
+    
+    print('nodes: ', *dp.get_nodes(), sep='\n')
     print('-'*10)
-    print('edges: ', *[str(x[0])+'->'+str(x[1]) for x in gr.edges], sep='\n')
+    print('edges: ', *[str(x[0])+'->'+str(x[1]) for x in dp.get_edges()], sep='\n')
