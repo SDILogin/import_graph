@@ -33,7 +33,8 @@ class DirParser:
         for root, dirs, file_names in os.walk(self.dir):
             files = [x for x in file_names if x.endswith('.h')]
             self.name_full_name_pair += list(zip(files, [root+'/'+x for x in files]))    
-        
+        print(self.name_full_name_pair)
+
     def construct_graph(self):
         G = {}
         for file_in_dir in self.name_full_name_pair:
@@ -58,7 +59,7 @@ if __name__ == '__main__':
     # res = parser.parse_modules_name()
     # print(*res, sep='\n')
     
-    dp = DirParser('/Users/SDI/Desktop/IOSProjects/vazhno-ios/Vazhno')
+    dp = DirParser('/Users/SDI/Desktop/IOSProjects/vesti-fm-ios/vestifm')
     dp.construct_graph()
     
     print('nodes: ', *dp.get_nodes(), sep='\n')

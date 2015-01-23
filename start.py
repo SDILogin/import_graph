@@ -1,4 +1,5 @@
 import tkinter, math, parser, random
+import tkinter.filedialog
 
 mul_m_m = lambda X,Y: [[sum(a*b for a,b in zip(x_row, y_col)) for y_col in zip(*Y)] for x_row in X]
 
@@ -146,10 +147,60 @@ def on_release(event):
     canvasxy = eventxy_to_canvasxy(event.widget, event.x, event.y)
     print('release at: (%d. %d)'%canvasxy)
     current, prev_x, prev_y = None, None, None
-    
-        
+
+selected_project = '.'
+
+def open_project():
+    global selected_project
+    selected_project = tkinter.filedialog.askdirectory(initialdir=selected_project)    
+
+    main_window.wm_title(selected_project)
+
+    #dp = parser.DirParser('/Users/SDI/Desktop/IOSProjects/vazhno-ios/Vazhno')
+    dp = parser.DirParser(selected_project)
+    dp.construct_graph()
+
+    canvas.delete(tkinter.ALL)
+
+    width, height = 200, 35
+    offset_x, offset_y = 10, 10
+    for node in dp.get_nodes():
+        width = len(node.value) * 10
+        # if offset_x + width > scrollregion_width:
+        #     offset_x = 10
+        #     offset_y += height * 1.1
+        #     classes[node.value] = SimpleClass(canvas, offset_x, offset_y, width, height, node.value)
+        # else:
+        #     classes[node.value] = SimpleClass(canvas, offset_x, offset_y, width, height, node.value)
+
+        # offset_x += width + 10
+        # offset_y %= scrollregion_height
+        classes[node.value] = SimpleClass(canvas, random.randint(0, scrollregion_width - width), random.randint(0, scrollregion_height - height), width, height, node.value)
+        classes[node.value].draw()
+
+    for edge in dp.get_edges():
+        #import pdb 
+        #pdb.set_trace()
+        _from = edge[1]
+        _to = edge[0]
+        arrow = SimpleArrow(canvas, classes[_from.value], classes[_to.value])
+        arrow.draw()
+
+
+def quit():
+    import sys
+    sys.exit()   
 
 main_window = tkinter.Tk()
+
+menubar = tkinter.Menu(main_window)
+
+filemenu = tkinter.Menu(menubar, tearoff=0)
+filemenu.add_command(label='Open project', command = lambda: open_project())
+filemenu.add_command(label='Quit', command = lambda: quit())
+menubar.add_cascade(label='File', menu=filemenu)
+
+main_window.config(menu=menubar)
 
 canvas_width, canvas_height = 1700, 768
 
@@ -170,33 +221,6 @@ vbar.config(command=canvas.yview)
 
 canvas.config(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
 canvas.pack(side=tkinter.LEFT,expand=True,fill=tkinter.BOTH)
-
-dp = parser.DirParser('/Users/SDI/Desktop/IOSProjects/vazhno-ios/Vazhno')
-dp.construct_graph()
-
-width, height = 200, 35
-offset_x, offset_y = 10, 10
-for node in dp.get_nodes():
-    width = len(node.value) * 10
-    # if offset_x + width > scrollregion_width:
-    #     offset_x = 10
-    #     offset_y += height * 1.1
-    #     classes[node.value] = SimpleClass(canvas, offset_x, offset_y, width, height, node.value)
-    # else:
-    #     classes[node.value] = SimpleClass(canvas, offset_x, offset_y, width, height, node.value)
-
-    # offset_x += width + 10
-    # offset_y %= scrollregion_height
-    classes[node.value] = SimpleClass(canvas, random.randint(0, scrollregion_width - width), random.randint(0, scrollregion_height - height), width, height, node.value)
-    classes[node.value].draw()
-
-for edge in dp.get_edges():
-    #import pdb 
-    #pdb.set_trace()
-    _from = edge[0]
-    _to = edge[1]
-    arrow = SimpleArrow(canvas, classes[_from.value], classes[_to.value])
-    arrow.draw()
 
 canvas.bind('<ButtonPress-1>', on_start_drag)
 canvas.bind('<B1-Motion>', on_drag)
